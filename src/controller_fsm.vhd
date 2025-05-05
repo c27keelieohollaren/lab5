@@ -38,8 +38,43 @@ entity controller_fsm is
 end controller_fsm;
 
 architecture FSM of controller_fsm is
-
+    type state_t is (S0, S1, S2, S3);
+    signal state, n_state: state_t;
 begin
+    process(i_adv, i_reset)
+    begin
+        if i_reset = '1' then
+            state <= S0;
+        elsif rising_edge(i_adv) then
+            state <= n_state;
+        end if;
+    end process;
+    
+  process(state)
+    begin
+        case state is
+        when S0 =>
+            n_state <= S1;
+        when S1 =>
+            n_state <= S2;
+        when S2 => 
+            n_state <= S3;
+        end case;
+    end process;
+  
+  process(state)
+    begin
+        case state is 
+        when S0 => 
+            o_cycle<="0001";
+        when S1 =>
+            o_cycle <= "0010";
+        when S2 =>
+            o_cycle <= "0100";
+        when S3 =>
+            o_cycle <= "1000";
+    end case;
+  end process;
 
 
 end FSM;
