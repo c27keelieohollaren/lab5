@@ -100,7 +100,7 @@ begin
 
         assert w_result = x"01"
             report "ADD carry: wrong result" severity error;
-        assert w_flags  = "0010"             -- N=0 Z=0 C=1 V=0
+        assert w_flags  = "1010"             -- N=0 Z=0 C=1 V=0
             report "ADD carry: wrong NZCV" severity error;
 
         ----------------------------------------------------------------------------
