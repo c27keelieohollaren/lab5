@@ -18,84 +18,80 @@
 -- 
 ----------------------------------------------------------------------------------
 
-
-library IEEE;
-use IEEE.STD_LOGIC_1164.ALL;
-
--- Uncomment the following library declaration if using
--- arithmetic functions with Signed or Unsigned values
-use IEEE.NUMERIC_STD.ALL;
-
--- Uncomment the following library declaration if instantiating
--- any Xilinx leaf cells in this code.
---library UNISIM;
---use UNISIM.VComponents.all;
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
 entity ALU is
-    Port ( i_A : in STD_LOGIC_VECTOR (7 downto 0);
-           i_B : in STD_LOGIC_VECTOR (7 downto 0);
-           i_op : in STD_LOGIC_VECTOR (2 downto 0);
-           o_result : out STD_LOGIC_VECTOR (7 downto 0);
-           o_flags : out STD_LOGIC_VECTOR (3 downto 0));  -- N Z C V
-end ALU;
+    port (
+        i_A      : in  std_logic_vector(7 downto 0);
+        i_B      : in  std_logic_vector(7 downto 0);
+        i_op     : in  std_logic_vector(2 downto 0);
+        o_result : out std_logic_vector(7 downto 0);
+        o_flags  : out std_logic_vector(3 downto 0)   -- N Z C V
+    );
+end entity;
 
-architecture Behavioral of ALU is
+architecture behavior of ALU is
+    signal result  : std_logic_vector(7 downto 0);
+    signal carry   : std_logic := '0';
+    signal flags   : std_logic_vector(3 downto 0); -- N Z C V
 begin
-    process (i_A, i_B, i_op)
-        variable result : std_logic_vector(7 downto 0);
-        variable flags  : std_logic_vector(3 downto 0);  -- N Z C V
-        variable carry  : std_logic;
+    process(i_A, i_B, i_op)
+        variable temp_sum : unsigned(8 downto 0);
+        variable temp_diff : unsigned(8 downto 0);
+        variable a_signed, b_signed, res_signed : signed(7 downto 0);
     begin
-        -- Default outputs
-        result := (others => '0');
-        flags  := (others => '0');
-        carry  := '0';
+        carry := '0';
+        flags := (others => '0');
+
+        a_signed := signed(i_A);
+        b_signed := signed(i_B);
 
         case i_op is
-            when "000" =>  -- ADD: A + B
-                -- Simple addition with carry
-                result := std_logic_vector(unsigned(i_A) + unsigned(i_B));
-                carry := '0';
-                if unsigned(i_A) + unsigned(i_B) > 255 then
-                    carry := '1';  -- Carry if result > 255
-                end if;
-                -- Overflow: same sign inputs, different sign result
-                if (i_A(7) = i_B(7) and result(7) /= i_A(7)) then
+            when "000" =>  -- ADD
+                temp_sum := unsigned('0' & i_A) + unsigned('0' & i_B);
+                result   <= std_logic_vector(temp_sum(7 downto 0));
+                carry    := temp_sum(8);
+                if (i_A(7) = i_B(7)) and (temp_sum(7) /= i_A(7)) then
                     flags(0) := '1';  -- V
+                else
+                    flags(0) := '0';
                 end if;
 
-            when "001" =>  -- SUB: A - B
-                -- Simple subtraction
-                result := std_logic_vector(unsigned(i_A) - unsigned(i_B));
-                carry := '1';
-                if unsigned(i_A) < unsigned(i_B) then
-                    carry := '0';  -- No carry if borrow needed
-                end if;
-                -- Overflow: opposite sign inputs, result sign differs from A
-                if (i_A(7) /= i_B(7) and result(7) /= i_A(7)) then
+            when "001" =>  -- SUB
+                temp_diff := unsigned('0' & i_A) - unsigned('0' & i_B);
+                result    <= std_logic_vector(temp_diff(7 downto 0));
+                carry     := not temp_diff(8);  -- Carry = 1 means no borrow
+                if (i_A(7) /= i_B(7)) and (temp_diff(7) /= i_A(7)) then
                     flags(0) := '1';  -- V
+                else
+                    flags(0) := '0';
                 end if;
 
-            when "010" =>  -- AND: A & B
-                result := i_A and i_B;
+            when "010" =>  -- AND
+                result <= i_A and i_B;
+                carry  := '0';
+                flags(0) := '0';  -- V = 0
 
-            when "011" =>  -- OR: A | B
-                result := i_A or i_B;
+            when "011" =>  -- OR
+                result <= i_A or i_B;
+                carry  := '0';
+                flags(0) := '0';  -- V = 0
 
-            when others =>  -- Invalid op-codes
-                result := (others => '0');
-                flags := (others => '0');
+            when others =>
+                result <= (others => '0');
+                carry  := '0';
+                flags  := (others => '0');
         end case;
 
-        -- Set flags
-        flags(3) := result(7);  -- N: Negative (MSB)
-        if result = "00000000" then
-            flags(2) := '1';  -- Z: Zero
-        end if;
-        flags(1) := carry;  -- C: Carry/Borrow
+        -- Flags assignment: N Z C V
+        flags(3) := result(7);                                 -- N
+        flags(2) := '1' when result = x"00" else '0';          -- Z
+        flags(1) := carry;                                     -- C
+        -- V is already assigned in each case above
 
-        -- Assign outputs
         o_result <= result;
-        o_flags <= flags;
+        o_flags  <= flags;
     end process;
-end Behavioral;
+end architecture;
