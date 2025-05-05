@@ -59,6 +59,8 @@ begin
             n_state <= S2;
         when S2 => 
             n_state <= S3;
+        when S3 =>
+            n_state <= S0;
         end case;
     end process;
   
