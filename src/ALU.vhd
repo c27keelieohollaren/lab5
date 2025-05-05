@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
  
-component ALU is
+entity ALU is
     port (
         i_A       : in  std_logic_vector(7 downto 0);
         i_B       : in  std_logic_vector(7 downto 0);
