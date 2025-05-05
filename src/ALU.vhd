@@ -13,40 +13,44 @@ entity ALU is
 end ALU;
 
 architecture Behavioral of ALU is
-    signal result   : STD_LOGIC_VECTOR(7 downto 0);
-    signal flags    : STD_LOGIC_VECTOR(3 downto 0); -- N Z C V
-    signal sum9     : UNSIGNED(8 downto 0);
-    signal diff9    : UNSIGNED(8 downto 0);
-    signal A_s, B_s, Res_s : SIGNED(7 downto 0);
+    signal result    : STD_LOGIC_VECTOR(7 downto 0);
+    signal flags     : STD_LOGIC_VECTOR(3 downto 0); -- N Z C V
+    signal sum9      : UNSIGNED(8 downto 0);
+    signal diff9     : UNSIGNED(8 downto 0);
+    signal A_signed, B_signed, R_signed : SIGNED(7 downto 0);
 begin
     process(i_A, i_B, i_op)
     begin
+        -- Default values
         result <= (others => '0');
         flags  <= (others => '0');
 
-        A_s <= signed(i_A);
-        B_s <= signed(i_B);
+        -- Signed versions for overflow detection
+        A_signed <= signed(i_A);
+        B_signed <= signed(i_B);
 
         case i_op is
             when "000" =>  -- ADD
-                sum9   <= ('0' & unsigned(i_A)) + ('0' & unsigned(i_B));
+                sum9 <= ('0' & unsigned(i_A)) + ('0' & unsigned(i_B));
                 result <= std_logic_vector(sum9(7 downto 0));
-                flags(1) <= sum9(8); -- Carry
+                flags(1) <= sum9(8); -- C
+                -- Overflow: same sign inputs, result sign differs
                 if (i_A(7) = i_B(7)) and (sum9(7) /= i_A(7)) then
-                    flags(0) <= '1'; -- Overflow
+                    flags(0) <= '1'; -- V
                 end if;
 
             when "001" =>  -- SUB
-                diff9  <= ('0' & unsigned(i_A)) - ('0' & unsigned(i_B));
+                diff9 <= ('0' & unsigned(i_A)) - ('0' & unsigned(i_B));
                 result <= std_logic_vector(diff9(7 downto 0));
+                -- Carry = 1 means no borrow
                 if unsigned(i_A) >= unsigned(i_B) then
-                    flags(1) <= '1'; -- No borrow => carry = 1
+                    flags(1) <= '1';
                 else
                     flags(1) <= '0';
                 end if;
-                Res_s <= signed(result);
-                if (A_s(7) /= B_s(7)) and (Res_s(7) /= A_s(7)) then
-                    flags(0) <= '1'; -- Overflow
+                R_signed <= signed(result);
+                if (i_A(7) /= i_B(7)) and (R_signed(7) /= i_A(7)) then
+                    flags(0) <= '1'; -- V
                 end if;
 
             when "010" =>  -- AND
@@ -57,12 +61,12 @@ begin
 
             when others =>
                 result <= (others => '0');
-                flags  <= (others => '0');
         end case;
 
-        -- N: Negative
+        -- N: Negative flag (MSB)
         flags(3) <= result(7);
-        -- Z: Zero
+
+        -- Z: Zero flag
         if result = "00000000" then
             flags(2) <= '1';
         else
